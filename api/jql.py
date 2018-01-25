@@ -32,9 +32,7 @@ class JQL(object):
         b64val = base64.b64encode(self.api_secret.encode())
 
         headers = {
-            'authorization': "Basic " + b64val.decode("utf-8"),
-            'cache-control': "no-cache",
-            'postman-token': "93adaa69-5a09-7697-734d-902ab558220f"
+            'authorization': "Basic " + b64val.decode("utf-8")
         }
 
         conn.request("POST", "/api/2.0/jql/", jql_payload, headers)
