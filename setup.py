@@ -5,7 +5,6 @@ from distutils.core import setup
 
 setup(name='mixpanel3',
       version='0.1.0',
-      packages=['mixpanel3'],
       modules=['mixpanel3'],
       description='Mixpanel API Client Python3 client.',
       author='Miroslav Karpis',
