@@ -1,7 +1,7 @@
 import sys
 import logging
 import configargparse
-from api.events import Events
+from mixpanel3.events import Events
 
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)

@@ -8,7 +8,7 @@ import sys
 import time
 import logging
 import configargparse
-from api.people import People
+from mixpanel3.people import People
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger(__name__)
