@@ -26,6 +26,7 @@ class JQL(object):
         """
         Functions sends request and returns result parsed as Pandas DataFrame
         Input: JQL query data in raw/text format URL encoded
+        Returns pandas dataframe
         """
         start_time = int(time.time())
         conn = http.client.HTTPSConnection("mixpanel.com")

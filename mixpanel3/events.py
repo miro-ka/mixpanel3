@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import os
 import sys
 import urllib.request
 from http.client import IncompleteRead
@@ -136,6 +136,10 @@ class Events(object):
             self.logger.info("Nothing to do here..(got empty dataset)")
             return
         start_time = time.time()
+        output_dir = 'out/'
+
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
 
         event_sets = {}
         for event in data:
@@ -153,7 +157,7 @@ class Events(object):
             df = pd.DataFrame(value)
             dates_range = params['from_date'] + '_' + params['to_date']
             file_name = key + '_' + dates_range + '.csv'
-            file_path = 'out/' + file_name
+            file_path = output_dir + file_name
             self.logger.info('..file converted: ' + file_name)
             df.to_csv(file_path)
 
