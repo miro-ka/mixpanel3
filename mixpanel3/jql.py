@@ -6,6 +6,7 @@ import pandas as pd
 import configargparse
 import time
 import base64
+import urllib.request
 
 
 class JQL:
@@ -30,13 +31,33 @@ class JQL:
         Returns pandas dataframe
         """
         start_time = int(time.time())
-        conn = http.client.HTTPSConnection("mixpanel.com")
         b64val = base64.b64encode(self.api_secret.encode())
 
+        # urlib implementation
+        req = urllib.request.Request(self.request_url)
+        req.add_header("Authorization", "Basic %s" % b64val.decode("utf-8"))
+        self.logger.info("Sending jql POST request..")
+        res = urllib.request.urlopen(req, str.encode(jql_payload), )
+        self.logger.info("Request done. Result: " + str(res.code) + ', in (sec): '
+                         + str(int(time.time()-start_time)))
+
+        if res.code != 200:
+            self.logger.error("JQL run() Received not 200 result!")
+            raise ValueError("JQL run() Received not 200 result!")
+
+        self.logger.info("Reading response..")
+        res_read_time_start = time.time()
+        data = res.read()
+        self.logger.info("done in (sec): " + str(int(time.time() - res_read_time_start)))
+
+        """
+        # http.client implementation
+
+        conn = http.client.HTTPSConnection("mixpanel.com")
         headers = {
             'authorization': "Basic " + b64val.decode("utf-8")
         }
-
+        
         conn.request("POST", "/api/2.0/jql/", jql_payload, headers)
 
         self.logger.info("Sending jql request..")
@@ -52,6 +73,7 @@ class JQL:
         res_read_time_start = time.time()
         data = res.read()
         self.logger.info("done in (sec): " + str(int(time.time() - res_read_time_start)))
+        """
 
         self.logger.info("Loading response to json..")
         json_res_time_start = time.time()
