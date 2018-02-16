@@ -8,11 +8,12 @@ import time
 import base64
 
 
-class JQL(object):
+class JQL:
     arg_parser = configargparse.get_argument_parser()
     arg_parser.add("--api_secret", help="Mixpanel API secret", required=True)
     arg_parser.add("--from_date", help="Export starting date (for ex. 2018-01-01)", required=False)
     arg_parser.add("--to_date", help="Export ending date (for ex. 2018-02-01)", required=False)
+    arg_parser.add("--jql_payload", help="JQL Payload query", required=False)
     request_url = 'https://mixpanel.com/api/2.0/jql/'
 
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
@@ -38,21 +39,30 @@ class JQL(object):
 
         conn.request("POST", "/api/2.0/jql/", jql_payload, headers)
 
-        self.logger.info("Sending request..")
+        self.logger.info("Sending jql request..")
         res = conn.getresponse()
-        self.logger.info("Request done. Result: " + str(res.code))
+        self.logger.info("Request done. Result: " + str(res.code) + ', in (sec): '
+                         + str(int(time.time()-start_time)))
 
         if res.code != 200:
             self.logger.error("JQL run() Received not 200 result!")
             raise ValueError("JQL run() Received not 200 result!")
 
-        self.logger.info("Parsing response to json..")
+        self.logger.info("Reading response..")
+        res_read_time_start = time.time()
         data = res.read()
+        self.logger.info("done in (sec): " + str(int(time.time() - res_read_time_start)))
+
+        self.logger.info("Loading response to json..")
+        json_res_time_start = time.time()
         json_res = json.loads(data)
-        # json_res = res.json()
+        self.logger.info("done in (sec): " + str(int(time.time() - json_res_time_start)))
+
         self.logger.info("Loading json to pandas..")
+        pandas_load_time_start = time.time()
         df = pd.DataFrame(json_res['results'])
         end_time = int(time.time())
+        self.logger.info("done in (sec): " + str(int(end_time - pandas_load_time_start)))
 
         self.logger.info("Fetching and parsing done in (sec.): " + str(end_time-start_time))
         return df
