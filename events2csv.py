@@ -13,7 +13,10 @@ def fetch_events(args):
     events_to_export = []
     if args.events:
         events_to_export = [args.events]
-    api.export(from_date=args.from_date, to_date=args.to_date, events_to_export=events_to_export)
+    api.export(from_date=args.from_date,
+               to_date=args.to_date,
+               events_to_export=events_to_export,
+               output_dir=args.out_dir)
 
 
 if __name__ == '__main__':

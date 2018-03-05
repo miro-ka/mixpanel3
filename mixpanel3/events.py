@@ -1,17 +1,3 @@
-# # Python API client library to export mixpanel.com events data.
-#
-#
-# Core of the code comes from Mixpanel, Inc. -- http://mixpanel.com/
-# witch have following copyright/license:
-#
-#      Copyright 2010-2013 Mixpanel, Inc
-#      Licensed under the Apache License, Version 2.0 (the "License")
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 import os
 import sys
@@ -22,7 +8,9 @@ import pandas as pd
 import json
 import logging
 import configargparse
-from base64 import b64encode
+import cchardet
+import base64
+import requests
 
 
 class Events(object):
@@ -31,6 +19,7 @@ class Events(object):
     arg_parser.add("--from_date", help="Export starting date (for ex. 2018-01-01)", required=True)
     arg_parser.add("--to_date", help="Export ending date (for ex. 2018-01-01)", required=True)
     arg_parser.add("--events", help="Events to be exported (comma separated)")
+    arg_parser.add("--out_dir", help="Output directory", required=True)
 
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     to_date = ''
@@ -46,7 +35,7 @@ class Events(object):
         # self.from_date =
         self.logger = logging.getLogger(__name__)
 
-    def export(self, from_date, to_date, events_to_export=[]):
+    def export(self, from_date, to_date, events_to_export=[], output_dir='/out'):
         self.logger.info('Export started...')
         start_time = time.time()
         self.from_date = from_date
@@ -59,7 +48,7 @@ class Events(object):
         query_params['from_date'] = from_date
         query_params['to_date'] = to_date
         response = self.request(methods=['export'], params=query_params)
-        self.events_to_csv(response, query_params)
+        self.events_to_csv(response, query_params, output_dir)
 
         end_time = time.time()
         total_sim_time = int(end_time - start_time)
@@ -72,7 +61,7 @@ class Events(object):
         params -  Extra parameters associated with method
         """
         start_time = time.time()
-        self.logger.info('Fetching data for dates range: ' + params['from_date'] + ' - ' + params['to_date'])
+        self.logger.info('Sending data request for dates range: ' + params['from_date'] + ' - ' + params['to_date'])
         request_url = '/'.join([self.request_url, str(self.api_version)] + methods)
         if http_method == 'GET':
             data = None
@@ -80,15 +69,34 @@ class Events(object):
         else:
             data = self.unicode_urlencode(params)
 
-        api_secret_byte = bytes(self.api_secret + ':', "utf-8")
-        api_secret_ascii = b64encode(api_secret_byte).decode("ascii")
-        headers = {'Authorization': 'Basic {encoded_secret}'.format(encoded_secret=api_secret_ascii)}
-        request = urllib.request.Request(request_url, data, headers)
-        response = urllib.request.urlopen(request, timeout=self.request_timeout)
+        b64val = base64.b64encode(self.api_secret.encode())
+
+        headers = {
+            'authorization': "Basic %s" % b64val.decode("utf-8")
+        }
+
+        res = requests.request("GET",
+                               request_url,
+                               data=data,
+                               headers=headers,
+                               stream=True)
+
+        if res.status_code != 200:
+            self.logger.error("JQL run() Received not 200 result!")
+            raise ValueError("JQL run() Received not 200 result!")
 
         if retries <= self.max_retries:
             try:
-                str_response = response.read().decode('utf8')
+                self.logger.info("Encoding response..")
+                res_encoding_start = time.time()
+                res.encoding = cchardet.detect(res.content)['encoding']
+                self.logger.info("done in (sec): " + str(int(time.time() - res_encoding_start)))
+
+                self.logger.info("Reading response..")
+                res_read_time_start = time.time()
+                str_response = res.text
+                self.logger.info("done in (sec): " + str(int(time.time() - res_read_time_start)))
+
                 lines = str_response.splitlines(True)
 
                 end_time = time.time()
@@ -130,13 +138,12 @@ class Events(object):
             [(k, v) for k, v in params]
         )
 
-    def events_to_csv(self, data, params):
+    def events_to_csv(self, data, params, output_dir):
         self.logger.info("Converting to csv (total of " + str(len(data)) + ' events)...')
         if len(data) == 0:
             self.logger.info("Nothing to do here..(got empty dataset)")
             return
         start_time = time.time()
-        output_dir = 'out/'
 
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
