@@ -97,7 +97,9 @@ class Events(object):
                 str_response = res.text
                 self.logger.info("done in (sec): " + str(int(time.time() - res_read_time_start)))
 
+                self.logger.info("Splitting lines")
                 lines = str_response.splitlines(True)
+                self.logger.info("Splitting lines, done")
 
                 end_time = time.time()
                 total_sim_time = int(end_time - start_time)
@@ -105,9 +107,14 @@ class Events(object):
                                  ' in: ' + str(total_sim_time) + ' sec.')
                 records = []
                 self.logger.info('Parsing strings to json...')
+                line_counter = 0
+                line_log_interval = 100000
                 for line in lines:
+                    if line_log_interval % line_log_interval == 0:
+                        self.logger.info('Lines parsed to json: ' + str(line_counter) + ', out of: ' + str(len(lines)))
                     obj = json.loads(line)
                     records.append(obj)
+                    line_counter += 1
                 total_sim_time = int(end_time - start_time)
                 self.logger.info('Parsing strings to json - done in: ' + str(total_sim_time) + ' sec.')
                 return records
