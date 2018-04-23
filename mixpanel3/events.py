@@ -110,7 +110,7 @@ class Events(object):
                 line_counter = 0
                 line_log_interval = 100000
                 for line in lines:
-                    if line_log_interval % line_log_interval == 0:
+                    if line_counter % line_log_interval == 0:
                         self.logger.info('Lines parsed to json: ' + str(line_counter) + ', out of: ' + str(len(lines)))
                     obj = json.loads(line)
                     records.append(obj)
@@ -158,8 +158,6 @@ class Events(object):
         event_sets = {}
         for event in data:
             event_name = event['event'].replace(" ", "_")
-            # properties = event['properties']
-            # properties.append(event['properties'])
             if event_name in event_sets:
                 event_sets[event_name].append(event['properties'])
             else:
@@ -173,7 +171,7 @@ class Events(object):
             file_name = key + '_' + dates_range + '.csv'
             file_path = output_dir + file_name
             self.logger.info('..file converted: ' + file_name)
-            df.to_csv(file_path)
+            df.to_csv(file_path, index=False)
 
         end_time = time.time()
         total_sim_time = int(end_time - start_time)
