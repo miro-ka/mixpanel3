@@ -1,4 +1,5 @@
 import sys
+import time
 import logging
 import configargparse
 from mixpanel3.events import Events
@@ -25,15 +26,13 @@ def scoop(args):
     api = Events(api_secret=args.api_secret)
 
     scoop_date = date_from
-    while scoop_date <= date_to:
+    while scoop_date.toordinal() <= date_to.toordinal():
 
         logger.info("Fetching data for period: " + str(scoop_date))
-
         api.export(from_date=str(scoop_date),
                    to_date=str(scoop_date),
                    events_to_export=events_to_export,
                    output_dir=args.out_dir)
-
         scoop_date += datetime.timedelta(days=1)
 
 
@@ -51,6 +50,7 @@ def fetch_events(args):
 if __name__ == '__main__':
     arg_parser = configargparse.get_argument_parser()
     input_args = arg_parser.parse_known_args()[0]
+    time_start = time.time()
     scoop(input_args)
-
-    logger.info('Application finished')
+    time_end = time.time()
+    logger.info('Application finished in ' + str(time_end-time_start) + ' sec.')

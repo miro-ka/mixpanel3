@@ -1,16 +1,19 @@
 
 import os
 import sys
-import urllib.request
-from http.client import IncompleteRead
 import time
-import pandas as pd
 import json
 import logging
-import configargparse
 import cchardet
 import base64
 import requests
+import hashlib
+import sqlite3
+from db.db import DB
+import configargparse
+import pandas as pd
+import urllib.request
+from http.client import IncompleteRead
 
 
 class Events(object):
@@ -20,6 +23,11 @@ class Events(object):
     arg_parser.add("--to_date", help="Export ending date (for ex. 2018-01-01)", required=True)
     arg_parser.add("--events", help="Events to be exported (comma separated)")
     arg_parser.add("--out_dir", help="Output directory", required=True)
+    arg_parser.add("--sqlite_logging", help="Log export progress to sqlite table (default False)", action='store_true',
+                   default=False)
+    arg_parser.add("--hash_distinct_id", help='Hash Distinct ID with sha256 + hash_backpack_string (default True)',
+                   action='store_true', default=True)
+    arg_parser.add("--hash_backpack_string", help="Extra hash string used for distinct id hashing")
 
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     to_date = ''
@@ -32,8 +40,14 @@ class Events(object):
 
     def __init__(self, api_secret):
         self.api_secret = api_secret
-        # self.from_date =
         self.logger = logging.getLogger(__name__)
+        arg_parser = configargparse.get_argument_parser()
+        args = arg_parser.parse_known_args()[0]
+        self.hash_distinct_id = args.hash_distinct_id
+        self.hash_backpack_string = args.hash_backpack_string
+        self.sqlite_logging = args.sqlite_logging
+        if self.sqlite_logging:
+            self.db_client = DB()
 
     def export(self, from_date, to_date, events_to_export=[], output_dir='/out'):
         self.logger.info('Export started...')
@@ -169,10 +183,34 @@ class Events(object):
             df = pd.DataFrame(value)
             dates_range = params['from_date'] + '_' + params['to_date']
             file_name = key + '_' + dates_range + '.csv'
+            file_name = file_name.replace('-', '')
             file_path = output_dir + file_name
             self.logger.info('..file converted: ' + file_name)
-            df.to_csv(file_path, index=False)
+            self.event_to_csv(df, file_path)
+
+            # If sqlite logging is enabled log progress
+            if self.sqlite_logging:
+                self.db_client.append(params['from_date'],
+                                      params['to_date'],
+                                      file_name,
+                                      df.values.nbytes/1048576)  # Convert to MB
 
         end_time = time.time()
         total_sim_time = int(end_time - start_time)
         self.logger.info('Conversion done in: ' + str(total_sim_time) + ' sec.')
+
+    def event_to_csv(self, event_df, file_path):
+        """
+        Hashes distinct id (if set) and exports file to csv
+        """
+        if self.hash_distinct_id is True:
+            event_df = self.hash_df(event_df, self.hash_backpack_string)
+        event_df.to_csv(file_path, index=False)
+
+    @staticmethod
+    def hash_df(df, hash_backpack_string):
+        """
+        Converts distinct_id to hashed value
+        """
+        df['distinct_id'] = df['distinct_id'].apply(lambda x: hashlib.sha256((str(x) + hash_backpack_string).encode()).hexdigest())
+        return df
