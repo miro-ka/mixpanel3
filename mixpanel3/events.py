@@ -23,10 +23,9 @@ class Events(object):
     arg_parser.add("--to_date", help="Export ending date (for ex. 2018-01-01)", required=True)
     arg_parser.add("--events", help="Events to be exported (comma separated)")
     arg_parser.add("--out_dir", help="Output directory", required=True)
-    arg_parser.add("--sqlite_logging", help="Log export progress to sqlite table (default False)", action='store_true',
-                   default=False)
+    arg_parser.add("--sqlite_logging", help="Log export progress to sqlite table (default False)", action='store_true')
     arg_parser.add("--hash_distinct_id", help='Hash Distinct ID with sha256 + hash_backpack_string (default True)',
-                   action='store_true', default=True)
+                   action='store_true')
     arg_parser.add("--hash_backpack_string", help="Extra hash string used for distinct id hashing")
 
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
